@@ -1,0 +1,15 @@
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+
+      var WEEKDAYS = [ 'Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота' ];
+      var WEEKDAYS_SHORT = [ 'Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб' ];
+
+      var weekday = [WEEKDAYS[index], WEEKDAYS_SHORT[index]];
+      
+      
+    var MONTHS = [ 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь' ]
+    var choices = MONTHS.map(this.renderMonthChoice);
+    
+    capitalizeFirstLetter(firstOfMonth.locale(this.props.locale).format('MMMM')),
