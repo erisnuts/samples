@@ -1,0 +1,213 @@
+
+import React, { DOM, PropTypes } from 'react';
+import { findDOMNode } from 'react-dom';
+
+import onClickOutside from 'react-onclickoutside';
+
+import ReactRangePicker from 'react-daterange-picker';
+import MaskedInput      from 'react-maskedinput';
+
+import { formatDate, formatDateCustom } from 'helpers/formats';
+
+import { validateDate }   from 'helpers/validators';
+import moment             from 'moment';
+import { bind }           from 'lodash/function';
+import { assign }         from 'lodash/object';
+
+import { ENTER, ESC, BACKSPACE, DELETE }  from 'constants/KeyCodes';
+
+
+class DatePickerSingle extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this._safeSetValue  = bind(this._safeSetValue, this);
+    this._handleFocus   = bind(this._handleFocus, this);
+    this._handleSelect  = bind(this._handleSelect, this);
+    this._handleVisible = bind(this._handleVisible, this);
+    this._getInputNode  = bind(this._getInputNode, this);
+    this._show = bind(this._show, this);
+    this.state = assign({}, this.state, { value: this._safeSetValue() });
+    this.state = assign({}, this.state, { visible: false });
+
+    this._isMounted = false;
+  }
+
+  _safeSetValue() {
+    return this.props.valueLink.value ? this.props.valueLink.value : moment().format('YYYY-MM-DD');
+  }
+
+  handleClickOutside() {
+    this._hide();
+  }
+
+  componentWillMount() {
+    if (__CLIENT__){
+      document.addEventListener('click', this._handleClick, false);
+      window.addEventListener('keydown', this._handleKeyPress);
+    }
+  }
+
+  componentDidMount(){
+    if (__CLIENT__)
+      this._isMounted = true;
+  }
+
+  componentWillUnmount() {
+    if (__CLIENT__) {
+      this._isMounted = false;
+
+      document.removeEventListener('click', this._handleClick, false);
+      window.removeEventListener('keydown', this._handleKeyPress);
+    }
+  }
+
+  _getInputNode() {
+    if(!this.state.inputNode) {
+      const ref = this.refs.MaskedInput;
+      const inputNode = findDOMNode(ref);
+      this.setState({inputNode});
+      return inputNode;
+    }
+    return this.state.inputNode;
+  }
+
+  _handleKeyPress(e) {
+    if (e.keyCode == ENTER) lg.dbg('это не работает');
+  }
+
+  _handleChangeCallback () {
+    if (this._isMounted)
+      this.setState({ value: this.props.valueLink.value });
+  }
+
+  _handleSelect(range) {
+    const _date = formatDateCustom(range.toISOString(), 'YYYY-MM-DD');
+    this.props.valueLink.value = _date;
+    this.props.valueLink.requestChange(_date ); //() => this.props.valueLink.pushChanges()
+    this.props.valueLink.error = null;
+    if (this._isMounted)
+      this.setState(assign({}, this.state, { value: this._safeSetValue() }));
+    this._handleVisible();
+  }
+
+  _handleVisible() {
+    this.state.visible ? this._hide() : this._show();
+  }
+
+  _handleFocus(e) {
+    if (!this.state.visible) {
+      setTimeout(() => this._show(), 0);
+      e.target.focus();
+    }
+  }
+
+  _show() {
+    if (this._isMounted)
+      this.setState({ visible: true });
+  }
+
+  _hide () {
+    if (this._isMounted)
+      this.setState({ visible: false });
+  }
+
+  render() {
+    const { valueLink, icon } = this.props;
+    //!TODO: убрать этот хак
+    var EveryTimeNewMaskedInput = React.createClass({
+
+      render() {
+        const { calendar } = this.props;
+
+        function _handleChange (e) {
+          //const _date = moment(e.target.value, 'DD.MM.YYYY');
+          if(validateDate(e.target.value, valueLink)) {
+            const _date = formatDateCustom(moment(e.target.value, 'DD.MM.YYYY').toISOString(), 'YYYY-MM-DD');
+            valueLink.value = _date;
+            valueLink.requestChange(_date);
+            if (calendar._isMounted) {
+              calendar.setState({value: valueLink.value});
+              calendar._handleVisible();
+            }
+          }
+        }
+
+        return React.createElement(MaskedInput, {
+          mask: '11.11.1111',
+          tabIndex: '1',
+          placeholder: 'ДД.ММ.ГГГГ',
+          value: valueLink.value ? formatDate(valueLink.value) : null,
+          onChange: (e) => _handleChange(e)
+        });
+      }
+    });
+
+    var EveryTimeNewReactRangePicker = React.createClass({
+
+      render() {
+        const { calendar } = this.props;
+
+        return React.createElement(ReactRangePicker, {
+          style: {
+            position: 'absolute',
+            backgroundColor: 'white',
+            zIndex: '100',
+            border: 'solid 1px #FDC12C',
+            paddingBottom: '5px'
+          },
+          numberOfCalendars: 2,
+          locale: 'ru',
+          selectionType: 'single',
+          minimumDate: new Date(),
+          maximumDate: moment().add(2, 'years').toDate(),
+          firstOfWeek: 1,
+          onSelect: calendar._handleSelect,
+          value: calendar.state.value ? moment(calendar.state.value, 'YYYY-MM-DD') : calendar._safeSetValue()
+        });
+      }
+    });
+
+    function _handleChange (e) {
+      //const _date = moment(e.target.value, 'DD.MM.YYYY');
+      if(validateDate(e.target.value, valueLink)) {
+        const _date = formatDateCustom(moment(e.target.value, 'DD.MM.YYYY').toISOString(), 'YYYY-MM-DD');
+        valueLink.value = _date;
+        valueLink.requestChange(_date);
+        if (this._isMounted) {
+          this.setState({value: valueLink.value});
+          this._handleVisible();
+        }
+      }
+    }
+
+    return (
+      DOM.div({ className: 'datePickerWrapper ui input left icon', onFocus: (e) => this._handleFocus(e) }
+        , DOM.i({ className: icon })
+        //, React.createElement(EveryTimeNewMaskedInput, { calendar: this })
+        , React.createElement(MaskedInput, {
+          ref: 'MaskedInput',
+          mask: '11.11.1111',
+          tabIndex: '1',
+          placeholder: 'ДД.ММ.ГГГГ',
+          value: valueLink.value ? formatDate(valueLink.value) : null,
+          onChange: (e) => _handleChange(e)
+        })
+        , !icon && DOM.span(null
+          , DOM.i({ className: 'icon calendar', style: {
+            cursor: 'pointer',
+            position: 'absolute',
+            right: '0.5em',
+            top: '0.7em' },
+            onClick: this._handleVisible
+          }))
+        , this.state.visible
+          ? DOM.div({ className: 'bottom left uikit_react_datepicker active' }
+            , React.createElement(EveryTimeNewReactRangePicker, { calendar: this }))
+          : null
+      )
+    );
+  }
+}
+
+export default onClickOutside(DatePickerSingle);
