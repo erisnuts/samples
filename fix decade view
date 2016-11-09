@@ -1,0 +1,1 @@
+return [this.toMoment().startOf('year'), this.toMoment().add(1, 'years').startOf('year'), this.toMoment().add(2, 'years').startOf('year')]
